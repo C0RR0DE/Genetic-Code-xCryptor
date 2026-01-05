@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DNA + mRNA Duo Transcriber</title>
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #0b0f14;
+  color: #e6edf3;
+  padding: 20px;
+}
+textarea {
+  width: 100%;
+  height: 120px;
+  background: #111827;
+  color: #e6edf3;
+  border: 1px solid #374151;
+  padding: 10px;
+  font-size: 16px;
+}
+button, select {
+  margin-top: 10px;
+  padding: 10px 16px;
+  font-size: 16px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+button:disabled {
+  opacity: 0.6;
+}
+#dna {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #93c5fd;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  display: none;
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+#output {
+  margin-top: 20px;
+  background: #020617;
+  padding: 12px;
+  min-height: 60px;
+  border: 1px solid #1f2937;
+  font-family: monospace;
+}
+.controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+</style>
+</head>
+<body>
+
+<h2>DNA + mRNA Duo Encryption Interface</h2>
+<div class="controls">
+  <select id="mode">
+    <option value="text">Text → Genetic Code (Transcription)</option>
+    <option value="genetic">Genetic Code → Text (Translation)</option>
+  </select>
+
+  <button id="actionBtn">
+    TRANSCRIPT
+    <div id="dna"></div>
+  </button>
+</div>
+
+<textarea id="input" placeholder="Enter text or genetic code..."></textarea>
+<div id="output"></div>
+
+<script>
+// Base mRNA codon map (unchanged)
+const charToCodon = {
+  'A':'AAA','B':'AAU','C':'AAG','D':'AAC','E':'AUA','F':'AUU','G':'AUC','H':'AGA','I':'AGU','J':'AGG','K':'AGC','L':'ACA','M':'ACU','N':'ACG','O':'ACC',
+  ',':'UAA','P':'UAU','.':'UAG','Q':'UAC','R':'UUA','S':'UUU','T':'UUG','U':'UUC','?':'UGA','V':'UGU','W':'UGG','X':'UGC','Y':'UCA','Z':'UCU',
+  'a':'UCG','b':'UCC','c':'GAA','d':'GAU','e':'GAG','f':'GAC','g':'GUA','h':'GUU','i':'GUG','j':'GUC','k':'GGA','l':'GGU','m':'GGG','n':'GGC',
+  'o':'GCA','p':'GCU','q':'GCG','r':'GCC','s':'CAA','t':'CAU','u':'CAG','v':'CAC','w':'CUA','x':'CUU','y':'CUG','z':'CUC',
+  '0':'CGA','1':'CGU','2':'CGG','3':'CGC','4':'CCA','5':'CCU','6':'CCG','7':'CCC',' ':'TTT','!':'TTC','8':'TTG','9':'AAT',';':'TCT',':':'TCC'
+};
+
+// Additional DNA codons for extra characters
+const charToDna = {
+  // Extend this list as needed for new characters
+};
+
+// Combined lookup for translation
+const codonToChar = Object.fromEntries(Object.entries(charToCodon).map(([k,v])=>[v,k]));
+const dnaToChar = Object.fromEntries(Object.entries(charToDna).map(([k,v])=>[v,k]));
+
+const dnaToMrna = codon=>codon.replace(/T/g,'U');
+
+const btn=document.getElementById('actionBtn');
+const spinner=document.getElementById('dna');
+const output=document.getElementById('output');
+const mode=document.getElementById('mode');
+
+mode.addEventListener('change',()=>{
+  btn.firstChild.textContent=mode.value==='text'?'TRANSCRIPT':'TRANSLATE';
+});
+
+btn.addEventListener('click',async()=>{
+  btn.disabled=true;
+  spinner.style.display='inline-block';
+  output.textContent='';
+
+  const input=document.getElementById('input').value.trim();
+  let delay=1000;
+
+  if(mode.value==='text'){
+    for(const ch of input){
+      const mrna=charToCodon[ch]??'###';
+      const dna=charToDna[ch]??'';
+      output.textContent+=dna?mrna+' '+dna+' ':mrna+' ';
+      if(delay>0){await new Promise(r=>setTimeout(r,delay)); delay=Math.max(0,delay-100);}
+    }
+  } else {
+    const parts=input.split(/\s+/);
+    for(let i=0;i<parts.length;i++){
+      const codon=parts[i].toUpperCase();
+      output.textContent+=codonToChar[codon]??dnaToChar[codon]??'#';
+      if(delay>0){await new Promise(r=>setTimeout(r,delay)); delay=Math.max(0,delay-100);}
+    }
+  }
+
+  spinner.style.display='none';
+  btn.disabled=false;
+});
+</script>
+
+</body>
+</html>
