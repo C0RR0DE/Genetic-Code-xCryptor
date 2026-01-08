@@ -40,6 +40,7 @@ button:disabled {
   animation: spin 1s linear infinite;
   display: none;
 }
+ -- gay porn
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
@@ -51,6 +52,15 @@ button:disabled {
   min-height: 60px;
   border: 1px solid #1f2937;
   font-family: monospace;
+  white-space: pre-wrap;
+}
+#copiedLabel {
+  display: inline-block;
+  margin-left: 10px;
+  color: #22c55e;
+  font-weight: bold;
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 .controls {
   display: flex;
@@ -72,69 +82,93 @@ button:disabled {
     TRANSCRIPT
     <div id="dna"></div>
   </button>
+  <button id="copyBtn" disabled>COPY OUTPUT</button>
+  <span id="copiedLabel">Copied!</span>
 </div>
 
 <textarea id="input" placeholder="Enter text or genetic code..."></textarea>
 <div id="output"></div>
 
+<!-- Hidden textarea for reliable copy -->
+<textarea id="hiddenCopy" style="position:absolute; left:-9999px;"></textarea>
+
 <script>
-// Base mRNA codon map (unchanged)
 const charToCodon = {
   'A':'AAA','B':'AAU','C':'AAG','D':'AAC','E':'AUA','F':'AUU','G':'AUC','H':'AGA','I':'AGU','J':'AGG','K':'AGC','L':'ACA','M':'ACU','N':'ACG','O':'ACC',
   ',':'UAA','P':'UAU','.':'UAG','Q':'UAC','R':'UUA','S':'UUU','T':'UUG','U':'UUC','?':'UGA','V':'UGU','W':'UGG','X':'UGC','Y':'UCA','Z':'UCU',
   'a':'UCG','b':'UCC','c':'GAA','d':'GAU','e':'GAG','f':'GAC','g':'GUA','h':'GUU','i':'GUG','j':'GUC','k':'GGA','l':'GGU','m':'GGG','n':'GGC',
   'o':'GCA','p':'GCU','q':'GCG','r':'GCC','s':'CAA','t':'CAU','u':'CAG','v':'CAC','w':'CUA','x':'CUU','y':'CUG','z':'CUC',
-  '0':'CGA','1':'CGU','2':'CGG','3':'CGC','4':'CCA','5':'CCU','6':'CCG','7':'CCC',' ':'TTT','!':'TTC','8':'TTG','9':'AAT',';':'TCT',':':'TCC','\'':'ATC','\"':'ACT'
-  '\\':'TAT','/':'TTA'
+  '0':'CGA','1':'CGU','2':'CGG','3':'CGC','4':'CCA','5':'CCU','6':'CCG','7':'CCC',' ':'TTT','!':'TTC','8':'TTG','9':'AAT',';':'TCT',':':'TCC','\'':'ATC','"':'ACT','\\':'TAT','/':'TTA','-':'TCA'
 };
-
-// Additional DNA codons for extra characters
-const charToDna = {
-  // Extend this list as needed for new characters
-};
-
-// Combined lookup for translation
+const charToDna = {};
 const codonToChar = Object.fromEntries(Object.entries(charToCodon).map(([k,v])=>[v,k]));
 const dnaToChar = Object.fromEntries(Object.entries(charToDna).map(([k,v])=>[v,k]));
 
-const dnaToMrna = codon=>codon.replace(/T/g,'U');
+const btn = document.getElementById('actionBtn');
+const spinner = document.getElementById('dna');
+const output = document.getElementById('output');
+const mode = document.getElementById('mode');
+const copyBtn = document.getElementById('copyBtn');
+const copiedLabel = document.getElementById('copiedLabel');
+const hiddenCopy = document.getElementById('hiddenCopy');
 
-const btn=document.getElementById('actionBtn');
-const spinner=document.getElementById('dna');
-const output=document.getElementById('output');
-const mode=document.getElementById('mode');
-
-mode.addEventListener('change',()=>{
-  btn.firstChild.textContent=mode.value==='text'?'TRANSCRIPT':'TRANSLATE';
+mode.addEventListener('change', () => {
+  btn.firstChild.textContent = mode.value === 'text' ? 'TRANSCRIPT' : 'TRANSLATE';
 });
 
-btn.addEventListener('click',async()=>{
-  btn.disabled=true;
-  spinner.style.display='inline-block';
-  output.textContent='';
+btn.addEventListener('click', async () => {
+  btn.disabled = true;
+  copyBtn.disabled = true;
+  spinner.style.display = 'inline-block';
+  const buffer = [];
 
-  const input=document.getElementById('input').value.trim();
-  let delay=1000;
+  const input = document.getElementById('input').value.trim();
+  let delay = 1000;
 
-  if(mode.value==='text'){
-    for(const ch of input){
-      const mrna=charToCodon[ch]??'###';
-      const dna=charToDna[ch]??'';
-      output.textContent+=dna?mrna+' '+dna+' ':mrna+' ';
-      if(delay>0){await new Promise(r=>setTimeout(r,delay)); delay=Math.max(0,delay-100);}
+  if (mode.value === 'text') {
+    for (const ch of input) {
+      buffer.push(charToCodon[ch] ?? '###');
+      output.textContent = buffer.join(' ');
+      if (delay > 0) {
+        await new Promise(r => setTimeout(r, delay));
+        delay = Math.max(0, delay - 100);
+      }
     }
   } else {
-    const parts=input.split(/\s+/);
-    for(let i=0;i<parts.length;i++){
-      const codon=parts[i].toUpperCase();
-      output.textContent+=codonToChar[codon]??dnaToChar[codon]??'#';
-      if(delay>0){await new Promise(r=>setTimeout(r,delay)); delay=Math.max(0,delay-100);}
+    const parts = input.split(/\s+/);
+    for (const codon of parts) {
+      buffer.push(codonToChar[codon] ?? '#');
+      output.textContent = buffer.join('');
+      if (delay > 0) {
+        await new Promise(r => setTimeout(r, delay));
+        delay = Math.max(0, delay - 100);
+      }
     }
   }
 
-  spinner.style.display='none';
-  btn.disabled=false;
+  spinner.style.display = 'none';
+  btn.disabled = false;
+  copyBtn.disabled = false;
 });
+
+copyBtn.addEventListener('click', () => {
+  const textToCopy = output.innerText || output.textContent;
+  if (!textToCopy) return;
+  hiddenCopy.value = textToCopy;
+  hiddenCopy.select();
+  hiddenCopy.setSelectionRange(0, hiddenCopy.value.length);
+  try {
+    document.execCommand('copy');
+    copiedLabel.style.opacity = 1;
+    setTimeout(() => { copiedLabel.style.opacity = 0; }, 1000);
+  } catch (err) {
+    window.prompt('Copy to clipboard: Ctrl+C, Enter', textToCopy);
+  }
+});
+
+// Basic sanity tests
+console.assert(charToCodon['A'] === 'AAA', 'Test failed: A → AAA');
+console.assert(codonToChar['AAA'] === 'A', 'Test failed: AAA → A');
 </script>
 
 </body>
